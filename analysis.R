@@ -25,7 +25,7 @@ source("utils.R")
 # 1. Preparation --------------------------------------------------------------
 
 # Import data
-data = read_excel("data.xlsx")
+data = read_excel("data/data.xlsx")
 
 # Define required class
 within(data,{
@@ -51,7 +51,7 @@ data %>%
 
 
 # Save ES values
-writexl::write_xlsx(data, "data_es.xlsx")
+writexl::write_xlsx(data, "data/data_es.xlsx")
 
 
 
