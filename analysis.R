@@ -32,6 +32,9 @@ within(data,{
        n_arm1 = as.numeric(n_arm1)
        n_arm2 = as.numeric(n_arm2)
        n_bl_arm1 = as.numeric(n_bl_arm1)
+       sd_arm2 = as.numeric(sd_arm2)
+       m_arm2 = as.numeric(m_arm2)
+       m_bl_arm2 = as.numeric(m_bl_arm2)
     }) -> data
 
 # Calculate effect sizes
@@ -181,7 +184,7 @@ cluster = as.integer(as.factor(dat.within$studlab))
 dat$kcluster = length(unique(cluster))
 
 # Create slots matrix to loop through within clusters
-dat$slots = matrix(c(1,1,2,2,3,3,4,5,6,8,9,10), ncol=2, byrow=TRUE)
+dat$slots = matrix(c(1,1,2,2,3,4,5,7,8,9), ncol=2, byrow=TRUE)
 
 # Run MCMC simulation
 fit = run.jags(M, monitor = params, data = dat,
@@ -197,20 +200,20 @@ data.frame(
   k = dat$kcluster,
   g = median(samples[,"mu"]),
   g.se = sd(samples[,"mu"]),
-  g.lo = hdi(samples[,"mu"])[1,1],
-  g.hi = hdi(samples[,"mu"])[2,1],
-  i2.lvl1 = median(samples[,"i2.l1"]),
-  i2.lvl1.lo = hdi(samples[,"i2.l1"])[1,1],
-  i2.lvl1.hi = hdi(samples[,"i2.l1"])[2,1],
-  i2.lvl2 = median(samples[,"i2.l2"]),
-  i2.lvl2.lo = hdi(samples[,"i2.l2"])[1,1],
-  i2.lvl2.hi = hdi(samples[,"i2.l2"])[2,1],
-  tau.lvl1 = median(samples[,"tau.l1"]),
-  tau.lvl1.lo = hdi(samples[,"tau.l1"])[1,1],
-  tau.lvl1.hi = hdi(samples[,"tau.l1"])[2,1],
-  tau.lvl2 = median(samples[,"tau.l2"]),
-  tau.lvl2.lo = hdi(samples[,"tau.l2"])[1,1],
-  tau.lvl2.hi = hdi(samples[,"tau.l2"])[2,1]
+  g.lo = hdi(samples[,"mu"] %>% as.numeric())[1,1],
+  g.hi = hdi(samples[,"mu"] %>% as.numeric())[1,2],
+  i2.lvl1 = median(samples[,"i2.l1"] %>% as.numeric()),
+  i2.lvl1.lo = hdi(samples[,"i2.l1"] %>% as.numeric())[1,1],
+  i2.lvl1.hi = hdi(samples[,"i2.l1"] %>% as.numeric())[1,2],
+  i2.lvl2 = median(samples[,"i2.l2"] %>% as.numeric()),
+  i2.lvl2.lo = hdi(samples[,"i2.l2"] %>% as.numeric())[1,1],
+  i2.lvl2.hi = hdi(samples[,"i2.l2"] %>% as.numeric())[1,2],
+  tau.lvl1 = median(samples[,"tau.l1"] %>% as.numeric()),
+  tau.lvl1.lo = hdi(samples[,"tau.l1"] %>% as.numeric())[1,1],
+  tau.lvl1.hi = hdi(samples[,"tau.l1"] %>% as.numeric())[1,2],
+  tau.lvl2 = median(samples[,"tau.l2"] %>% as.numeric()),
+  tau.lvl2.lo = hdi(samples[,"tau.l2"] %>% as.numeric())[1,1],
+  tau.lvl2.hi = hdi(samples[,"tau.l2"] %>% as.numeric())[1,2]
 ) %>% 
   mutate(
     pi.lo = g - qt(.975, k-1)*sqrt(g.se^2+tau.lvl2^2),
@@ -236,16 +239,18 @@ samples.between %>%
   pivot_longer(everything()) %>% 
   mutate(name = as.factor(name),
          name = recode(name, 
-                       "theta[1]" = "Cox, 2009",
-                       "theta[2]" = "Kassam-Adams, 2016",
-                       "theta[3]" = "Ruggiero et al,, 2015",
+                       "theta[1]" = "Cox et al. (2009)",
+                       "theta[2]" = "Kassam-Adams et al. (2016)",
+                       "theta[3]" = "Ruggiero et al. (2015)",
                        "mu" = "Overall Effect"),
          name = fct_relevel(name, "Overall Effect")) -> dat.plt
 
 # Define labeling order
-levels(dat.plt$name) = c(
-  "Cox, 2009", "Kassam-Adams, 2016", 
-  "Ruggiero et al,, 2015", "Overall Effect") %>% rev()
+dat.plt$name = factor(dat.plt$name,
+                      levels = c("Cox et al. (2009)", 
+                                 "Kassam-Adams et al. (2016)", 
+                                 "Ruggiero et al. (2015)", 
+                                 "Overall Effect") %>% rev())
 
 # Generate summary data
 dat.plt.sum = samples.between %>% 
@@ -260,16 +265,18 @@ dat.plt.sum = samples.between %>%
               .lower = .[,3][,1], .upper = .[,3][,2])} %>% 
   mutate(name = as.factor(name),
          name = recode(name, 
-                       "theta[1]" = "Cox, 2009",
-                       "theta[2]" = "Kassam-Adams, 2016",
-                       "theta[3]" = "Ruggiero et al,, 2015",
+                       "theta[1]" = "Cox et al. (2009)",
+                       "theta[2]" = "Kassam-Adams et al. (2016)",
+                       "theta[3]" = "Ruggiero et al. (2015)",
                        "mu" = "Overall Effect"),
          name = fct_relevel(name, "Overall Effect"))
 
 # Change label order for summary data
-levels(dat.plt.sum$name) = c(
-  "Cox, 2009", "Kassam-Adams, 2016", 
-  "Ruggiero et al,, 2015", "Overall Effect") %>% rev()
+dat.plt.sum$name = factor(dat.plt.sum$name,
+                      levels = c("Cox et al. (2009)", 
+                                 "Kassam-Adams et al. (2016)", 
+                                 "Ruggiero et al. (2015)", 
+                                 "Overall Effect") %>% rev())
 
 # Define colors
 colors = c("lightskyblue", "cornflowerblue", "lightblue", "gray20") %>% rev()
@@ -279,7 +286,7 @@ colors2 = c("dodgerblue", "dodgerblue", "dodgerblue", "gray20") %>% rev()
 ggplot(dat.plt, aes(value, name, fill = name)) + 
   
   # Add vertical lines for pooled effect and CI
-  geom_vline(xintercept = summary(fit)[1,2], 
+  geom_vline(xintercept = median(samples.between[,"mu"]), 
              color = "grey", linewidth = 1) +
   geom_vline(xintercept = c(hdi(as.numeric(samples.between[,"mu"]))[,1], 
                             hdi(as.numeric(samples.between[,"mu"]))[,2]), 
@@ -320,36 +327,40 @@ ggsave(plt, file="results/plot.between.png", bg = "white",
 # Create posterior draws data set
 samples.within %>% 
   as.data.frame() %>% 
-  select(mu, `theta[1]`:`theta[10]`) %>% 
+  select(mu, `theta[1]`:`theta[9]`) %>% 
   pivot_longer(everything()) %>% 
   mutate(name = as.factor(name),
          name = recode(name, 
-                       "theta[1]" = "Cox, 2009",
-                       "theta[2]" = "Jaycox, 2019",
-                       "theta[3]" = "Kassam-Adams, 2016",
-                       "theta[4]" = "Ruggiero, 2015 BBN",
-                       "theta[5]" = "Ruggiero, 2015 BBN + ASH",
-                       "theta[6]" = "Schuurmans, 2022 Muse",
-                       "theta[7]" = "Schuurmans, 2022 Daydream",
-                       "theta[8]" = "Schuurmans, 2022 Wild divine",
-                       "theta[9]" = "van Rosmalen-Nooijens, 2017 original",
-                       "theta[10]" = "van Rosmalen-Nooijens, 2017 waiting",
+                       "theta[1]" = "Cox et al. (2009) (IMI)",
+                       "theta[2]" = "Kassam-Adams et al. (2016) (IMI)",
+                       "theta[3]" = "Ruggiero et al. (2015) (IMI)",
+                       "theta[4]" = "Ruggiero et al. (2015) (IMI + ASH)",
+                       "theta[5]" = "Schuurmans et al. (2022) (IMI Muse)",
+                       "theta[6]" = "Schuurmans et al. (2022) (IMI Daydream)",
+                       "theta[7]" = "Schuurmans et al. (2022) (IMI Wild divine)",
+                       "theta[8]" = "van Rosmalen-Nooijens et al. (2017) (IMI)",
+                       "theta[9]" = "van Rosmalen-Nooijens et al. (2017) (IMI for controls)",
                        "mu" = "Overall Effect"),
          name = fct_relevel(name, "Overall Effect")) -> dat.plt
 
 # Define labeling order
-levels(dat.plt$name) = c(
-  "Cox, 2009", "Jaycox, 2019", "Kassam-Adams, 2016", 
-  "Ruggiero, 2015 BBN", "Ruggiero, 2015 BBN + ASH", "Schuurmans, 2022 Muse", 
-  "Schuurmans, 2022 Daydream", "Schuurmans, 2022 Wild divine",
-  "van Rosmalen-Nooijens, 2017 original", 
-  "van Rosmalen-Nooijens, 2017 waiting", 
-  "Overall Effect") %>% rev()
+dat.plt$name = factor(
+  dat.plt$name,
+  levels = c("Cox et al. (2009) (IMI)",
+             "Kassam-Adams et al. (2016) (IMI)",
+             "Ruggiero et al. (2015) (IMI)",
+             "Ruggiero et al. (2015) (IMI + ASH)",
+             "Schuurmans et al. (2022) (IMI Muse)",
+             "Schuurmans et al. (2022) (IMI Daydream)",
+             "Schuurmans et al. (2022) (IMI Wild divine)",
+             "van Rosmalen-Nooijens et al. (2017) (IMI)",
+             "van Rosmalen-Nooijens et al. (2017) (IMI for controls)",
+             "Overall Effect") %>% rev())
 
 # Generate summary data
 dat.plt.sum = samples.within %>% 
   as.data.frame() %>% 
-  select(mu, `theta[1]`:`theta[10]`) %>% 
+  select(mu, `theta[1]`:`theta[9]`) %>% 
   pivot_longer(everything()) %>% 
   group_by(name) %>% 
   summarise(.est = median(value),
@@ -359,27 +370,31 @@ dat.plt.sum = samples.within %>%
               .lower = .[,3][,1], .upper = .[,3][,2])} %>% 
   mutate(name = as.factor(name),
          name = recode(name, 
-                  "theta[1]" = "Cox, 2009",
-                  "theta[2]" = "Jaycox, 2019",
-                  "theta[3]" = "Kassam-Adams, 2016",
-                  "theta[4]" = "Ruggiero, 2015 BBN",
-                  "theta[5]" = "Ruggiero, 2015 BBN + ASH",
-                  "theta[6]" = "Schuurmans, 2022 Muse",
-                  "theta[7]" = "Schuurmans, 2022 Daydream",
-                  "theta[8]" = "Schuurmans, 2022 Wild divine",
-                  "theta[9]" = "van Rosmalen-Nooijens, 2017 original",
-                  "theta[10]" = "van Rosmalen-Nooijens, 2017 waiting",
-                  "mu" = "Overall Effect"),
+                       "theta[1]" = "Cox et al. (2009) (IMI)",
+                       "theta[2]" = "Kassam-Adams et al. (2016) (IMI)",
+                       "theta[3]" = "Ruggiero et al. (2015) (IMI)",
+                       "theta[4]" = "Ruggiero et al. (2015) (IMI + ASH)",
+                       "theta[5]" = "Schuurmans et al. (2022) (IMI Muse)",
+                       "theta[6]" = "Schuurmans et al. (2022) (IMI Daydream)",
+                       "theta[7]" = "Schuurmans et al. (2022) (IMI Wild divine)",
+                       "theta[8]" = "van Rosmalen-Nooijens et al. (2017) (IMI)",
+                       "theta[9]" = "van Rosmalen-Nooijens et al. (2017) (IMI for controls)",
+                       "mu" = "Overall Effect"),
          name = fct_relevel(name, "Overall Effect"))
   
 # Change label order for summary data
-levels(dat.plt.sum$name) = c(
-  "Cox, 2009", "Jaycox, 2019", "Kassam-Adams, 2016", 
-  "Ruggiero, 2015 BBN", "Ruggiero, 2015 BBN + ASH", "Schuurmans, 2022 Muse", 
-  "Schuurmans, 2022 Daydream", "Schuurmans, 2022 Wild divine",
-  "van Rosmalen-Nooijens, 2017 original", 
-  "van Rosmalen-Nooijens, 2017 waiting", 
-  "Overall Effect") %>% rev()
+dat.plt.sum$name = factor(
+  dat.plt.sum$name,
+  levels = c("Cox et al., 2009 (IMI)",
+             "Kassam-Adams et al., 2016 (IMI)",
+             "Ruggiero et al., (2015) (IMI)",
+             "Ruggiero et al., (2015) (IMI + ASH)",
+             "Schuurmans et al., 2022 (Muse)",
+             "Schuurmans et al., 2022 (Daydream)",
+             "Schuurmans et al., 2022 (Wild divine)",
+             "van Rosmalen-Nooijens et al., 2017 (IMI)",
+             "van Rosmalen-Nooijens et al., 2017 (IMI for controls)",
+             "Overall Effect") %>% rev())
 
 # Define colors
 colors = c("lightskyblue", "steelblue",
@@ -391,7 +406,7 @@ colors = c("lightskyblue", "steelblue",
 ggplot(dat.plt, aes(value, name, fill = name)) + 
   
   # Add vertical lines for pooled effect and CI
-  geom_vline(xintercept = summary(fit)[1,2], 
+  geom_vline(xintercept = median(samples.within[,"mu"]), 
              color = "grey", linewidth = 1) +
   geom_vline(xintercept = c(hdi(as.numeric(samples.within[,"mu"]))[,1], 
                             hdi(as.numeric(samples.within[,"mu"]))[,2]), 
@@ -415,7 +430,7 @@ ggplot(dat.plt, aes(value, name, fill = name)) +
   # Theming
   scale_fill_manual(values = colors) + 
   xlab("Standardized Mean Difference (Hedges' g)") +
-  ylab("") +  xlim(c(-1, .5)) + theme_minimal() +
+  ylab("") +  xlim(c(-1, 1)) + theme_minimal() +
   theme(legend.position = "none", 
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
