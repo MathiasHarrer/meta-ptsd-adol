@@ -385,15 +385,15 @@ dat.plt.sum = samples.within %>%
 # Change label order for summary data
 dat.plt.sum$name = factor(
   dat.plt.sum$name,
-  levels = c("Cox et al., 2009 (IMI)",
-             "Kassam-Adams et al., 2016 (IMI)",
-             "Ruggiero et al., (2015) (IMI)",
-             "Ruggiero et al., (2015) (IMI + ASH)",
-             "Schuurmans et al., 2022 (Muse)",
-             "Schuurmans et al., 2022 (Daydream)",
-             "Schuurmans et al., 2022 (Wild divine)",
-             "van Rosmalen-Nooijens et al., 2017 (IMI)",
-             "van Rosmalen-Nooijens et al., 2017 (IMI for controls)",
+  levels = c("Cox et al. (2009) (IMI)",
+             "Kassam-Adams et al. (2016) (IMI)",
+             "Ruggiero et al. (2015) (IMI)",
+             "Ruggiero et al. (2015) (IMI + ASH)",
+             "Schuurmans et al. (2022) (IMI Muse)",
+             "Schuurmans et al. (2022) (IMI Daydream)",
+             "Schuurmans et al. (2022) (IMI Wild divine)",
+             "van Rosmalen-Nooijens et al. (2017) (IMI)",
+             "van Rosmalen-Nooijens et al. (2017) (IMI for controls)",
              "Overall Effect") %>% rev())
 
 # Define colors
