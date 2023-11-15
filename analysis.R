@@ -439,3 +439,16 @@ ggplot(dat.plt, aes(value, name, fill = name)) +
 # Save plot
 ggsave(plt, file="results/plot.within.png", bg = "white")
 
+
+
+# 5. Sensitivity Analysis ------------------------------------------------------
+
+# van Rosmalen et al. showed very strong baseline imbalance and was therefore
+# excluded in the between-group effect analysis. We now conduct a sensitivity
+# analysis in which this effect is included.
+
+
+
+
+
+
