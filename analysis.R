@@ -447,8 +447,99 @@ ggsave(plt, file="results/plot.within.png", bg = "white")
 # excluded in the between-group effect analysis. We now conduct a sensitivity
 # analysis in which this effect is included.
 
+# Import data
+data.sens = read_excel("data/data_sens.xlsx")
+
+# Define required class
+within(data.sens,{
+  n_arm1 = as.numeric(n_arm1)
+  n_arm2 = as.numeric(n_arm2)
+  n_bl_arm1 = as.numeric(n_bl_arm1)
+  sd_arm2 = as.numeric(sd_arm2)
+  m_arm2 = as.numeric(m_arm2)
+  m_bl_arm2 = as.numeric(m_bl_arm2)
+}) -> data.sens
+
+# Calculate effect sizes
+# For within-group changes, we assume r=0.8
+rho = 0.8
+data.sens %>% 
+  mutate(
+    sd_pooled = sqrt(((n_arm1-1L)*sd_arm1^2L + 
+                        (n_arm2-1)*sd_arm2^2L)/(n_arm1 + n_arm2 - 2L)),
+    smd_betw = (m_arm1-m_arm2)/sd_pooled,
+    se_smd_betw =sqrt(((n_arm1 + n_arm2)/(n_arm1*n_arm2)) + 
+                        (smd_betw^2L/(2L*(n_arm1+n_arm2)))),
+    smd_within = (m_arm1 - m_bl_arm1)/sd_bl_arm1,
+    se_smd_within = sqrt(((2L*(1L-rho))/n_bl_arm1) + 
+                           (smd_within^2L/(2L*n_bl_arm1)))
+  ) -> data.sens
 
 
+# Save ES values
+writexl::write_xlsx(data.sens, "data/data_sens_es.xlsx")
 
+# Filter out effect sizes
+data.sens %>% 
+  mutate(yi = hedgesG(smd_betw, n_arm1 + n_arm2), vi = se_smd_betw) %>% 
+  drop_na(yi, vi) -> dat.sens.between
+
+# Define JAGS model (standard IV REM with Half-Cauchy prior)
+M = "
+model{
+
+  # Likelihood
+  for (i in 1:length(yi)){
+
+    # Hierarchical model
+    theta[i] ~ dnorm(mu, prec.tau)
+    yi[i] ~ dnorm(theta[i], prec.sigma[i])
+    
+    # Plug-in estimator of sigma
+    prec.sigma[i] = pow(vi[i], -1)
+
+  }
+  
+  # Prior
+  mu ~ dnorm(0, 0.00001)
+  prec.tau = 1/pow(tau,2)
+  tau ~ dt(0, pow(0.2,-2), 1)T(0,)
+
+  # Deterministic: define I-squared
+  K = length(yi)
+  w = pow(vi, -1)
+  v.tilde = ((K-1)*sum(w))/(pow(sum(w),2)-sum(pow(w,2)))
+  i2 = pow(tau,2)/(pow(tau,2) + v.tilde)
+}
+"
+
+# Run model; get samples
+params = c("mu", "tau", "i2", "theta")
+dat = as.list(dat.sens.between %>% dplyr::select(yi, vi))
+fit = run.jags(M, monitor = params, data = dat, n.chains = 4, 
+               sample = 90000, burnin = 1000, thin = 10)
+samples = combine.mcmc(fit)
+
+
+# Create results data.frame
+data.frame(
+  analysis = "Between-Group Effects",
+  k = length(dat$yi),
+  g = median(samples[,"mu"] %>% as.numeric()),
+  g.se = sd(samples[,"mu"] %>% as.numeric()),
+  g.lo = hdi(samples[,"mu"] %>% as.numeric())[,1],
+  g.hi = hdi(samples[,"mu"] %>% as.numeric())[,2],
+  i2 = median(samples[,"i2"] %>% as.numeric()),
+  i2.lo = hdi(samples[,"i2"] %>% as.numeric())[1,1],
+  i2.hi = hdi(samples[,"i2"] %>% as.numeric())[1,2],
+  tau = median(samples[,"tau"] %>% as.numeric()),
+  tau.lo = hdi(samples[,"tau"] %>% as.numeric())[,1],
+  tau.hi = hdi(samples[,"tau"] %>% as.numeric())[,2]
+) %>% 
+  mutate(
+    pi.lo = g - qt(.975, k-1)*sqrt(g.se^2+tau^2),
+    pi.hi = g + qt(.975, k-1)*sqrt(g.se^2+tau^2)
+  ) %>% 
+  write_xlsx("results/results_between_group_sens.xlsx")
 
 
